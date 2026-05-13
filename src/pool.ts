@@ -136,11 +136,11 @@ export class MssqlExecutor implements Executor {
 
     if (cfg.auth.kind === 'sql') {
       sqlConfig.user = cfg.auth.username;
-      const pw = process.env[cfg.auth.password_env];
+      const pw = cfg.auth.password ?? (cfg.auth.password_env ? process.env[cfg.auth.password_env] : undefined);
       if (!pw) {
         throw new McpToolError(
           'CONNECTION_FAILED',
-          `Env var ${cfg.auth.password_env} is not set for server "${name}".`,
+          `No password for server "${name}". Set \`password\` in config or export ${cfg.auth.password_env ?? '<password_env>'}.`,
         );
       }
       sqlConfig.password = pw;

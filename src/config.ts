@@ -2,12 +2,17 @@ import { readFileSync } from 'node:fs';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
 
+// Either `password` (plaintext) or `password_env` (env var name) must be set
+// for kind: sql. We don't enforce that here so the discriminated union stays
+// a plain ZodObject set — the missing-password case is reported at connect
+// time in pool.ts with a more actionable error.
 const AuthSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('windows') }),
   z.object({
     kind: z.literal('sql'),
     username: z.string(),
-    password_env: z.string(),
+    password: z.string().optional(),
+    password_env: z.string().optional(),
   }),
 ]);
 

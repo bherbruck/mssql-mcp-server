@@ -62,6 +62,7 @@ async function main() {
     private: true,
     type: 'module',
     dependencies: pkg.dependencies,
+    optionalDependencies: pkg.optionalDependencies,
   };
   await writeFile(join(stage, 'package.json'), JSON.stringify(stagePkg, null, 2) + '\n');
   console.log('Installing production deps into plugin stage…');

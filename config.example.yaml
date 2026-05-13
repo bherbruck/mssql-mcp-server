@@ -20,7 +20,8 @@ servers:
     auth:
       kind: sql
       username: claude_reader
-      password_env: PROD_SQL_PASSWORD   # name of the env var holding the password
+      password_env: PROD_SQL_PASSWORD   # env-var name (preferred for shared/checked-in configs)
+      # password: hunter2               # OR inline plaintext — fine for local-only configs
     read_only: true
     encrypt: true
     trust_server_certificate: false
