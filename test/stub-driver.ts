@@ -19,6 +19,16 @@ export class StubExecutor implements Executor {
   private defaultServer_?: string;
   private handlers: Array<{ match: Matcher; respond: (sql: string, opts: ExecOpts) => StubResponse }> = [];
   public calls: Array<{ server: string; sql: string; opts: ExecOpts }> = [];
+  private skillsDir_ = '';
+
+  skillsDir(): string {
+    return this.skillsDir_;
+  }
+
+  setSkillsDir(dir: string): this {
+    this.skillsDir_ = dir;
+    return this;
+  }
 
   servers(list: ResolvedServer[]): this {
     this.servers_ = list;

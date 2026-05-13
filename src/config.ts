@@ -32,6 +32,12 @@ const ServerSchema = z.object({
   timeout_ms: z.number().int().positive().optional(),
   encrypt: z.boolean().optional(),
   trust_server_certificate: z.boolean().optional(),
+  // Optional short metadata surfaced via list_servers. Longer free-form
+  // docs live in <config-dir>/notes/<server>.md and are exposed via the
+  // get_server_notes / update_server_notes tools (Claude can grow them
+  // as it learns the dataset).
+  description: z.string().optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 const DefaultsSchema = z

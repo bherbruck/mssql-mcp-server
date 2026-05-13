@@ -8,6 +8,7 @@
 
 import sql from 'mssql';
 import { existsSync, watch, type FSWatcher } from 'node:fs';
+import { dirname, join } from 'node:path';
 import { loadConfig, type AppConfig, type ServerConfig } from './config.js';
 import { McpToolError, toToolError } from './errors.js';
 import { canonicalType, normalizeRow } from './format.js';
@@ -24,6 +25,10 @@ export class MssqlExecutor implements Executor {
     this.startWatcher();
   }
 
+  skillsDir(): string {
+    return join(dirname(this.configPath), 'skills');
+  }
+
   listServers(): ResolvedServer[] {
     if (!this.config) return [];
     return Object.entries(this.config.servers).map(([name, cfg]) => ({
@@ -32,6 +37,8 @@ export class MssqlExecutor implements Executor {
       database: cfg.database,
       readOnly: cfg.read_only ?? this.config!.defaults.read_only,
       isDefault: this.config!.default_server === name,
+      description: cfg.description,
+      tags: cfg.tags,
     }));
   }
 

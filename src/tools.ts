@@ -12,6 +12,8 @@ import { z } from 'zod';
 import type { Executor } from './executor.js';
 import { McpToolError } from './errors.js';
 import { createHash } from 'node:crypto';
+import { mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
 
 // ---------- Shared input fragments ----------
 
@@ -43,6 +45,10 @@ export function buildTools(executor: Executor) {
     explainQuery(executor),
     runQuery(executor),
     executeWrite(executor),
+    listSkills(executor),
+    readSkill(executor),
+    writeSkill(executor),
+    deleteSkill(executor),
   ];
 }
 
@@ -87,6 +93,8 @@ function listServers(executor: Executor) {
         database: s.database,
         read_only: s.readOnly,
         is_default: s.isDefault,
+        description: s.description,
+        tags: s.tags,
       })),
     }),
   });
@@ -725,6 +733,141 @@ function executeWrite(executor: Executor) {
         rows_affected: result.rowCount,
         elapsed_ms: result.elapsedMs,
       };
+    },
+  });
+}
+
+// ---------- skill files (mssql notebook) ----------
+//
+// A "skill" here is a markdown file living next to the config — knowledge
+// the LLM (or the user) wants to keep around across sessions: cross-server
+// query recipes, schema notes, business rules ("widgets where type='B' are
+// archived after 90 days"), etc. The MCP layer just exposes safe CRUD over
+// the directory; structure and content are up to the caller.
+
+const SKILL_NAME_RE = /^[a-z0-9][a-z0-9_-]{0,62}$/i;
+
+function ensureSkillsDir(executor: Executor): string {
+  const dir = executor.skillsDir();
+  if (!dir) {
+    throw new McpToolError('INTERNAL_ERROR', 'Skills directory is not configured.');
+  }
+  mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function resolveSkillPath(executor: Executor, name: string): string {
+  if (!SKILL_NAME_RE.test(name)) {
+    throw new McpToolError(
+      'PARAM_BIND_ERROR',
+      `Invalid skill name "${name}". Use letters, digits, '-' or '_'; up to 63 chars; must start with alphanumeric.`,
+    );
+  }
+  return join(ensureSkillsDir(executor), `${name}.md`);
+}
+
+function listSkills(executor: Executor) {
+  return tool({
+    name: 'list_skills',
+    description:
+      'List every saved markdown skill (cross-session notes the user/LLM have written about this dataset). Each entry returns name, size, mtime, and the first heading/line as a preview so you can pick which to read.',
+    inputSchema: z.object({}).strict(),
+    handler: async () => {
+      const dir = ensureSkillsDir(executor);
+      const entries = readdirSync(dir, { withFileTypes: true })
+        .filter((e) => e.isFile() && e.name.endsWith('.md'))
+        .map((e) => {
+          const path = join(dir, e.name);
+          const stat = statSync(path);
+          const name = e.name.replace(/\.md$/, '');
+          let preview = '';
+          try {
+            const head = readFileSync(path, 'utf-8').slice(0, 400);
+            const firstLine = head.split('\n').find((l) => l.trim().length > 0) ?? '';
+            preview = firstLine.replace(/^#+\s*/, '').slice(0, 160);
+          } catch {
+            // ignore
+          }
+          return {
+            name,
+            size_bytes: stat.size,
+            modified_at: stat.mtime.toISOString(),
+            preview,
+          };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
+      return { dir, skills: entries };
+    },
+  });
+}
+
+function readSkill(executor: Executor) {
+  return tool({
+    name: 'read_skill',
+    description:
+      'Return the full markdown contents of one saved skill. Use list_skills first to see what is available.',
+    inputSchema: z
+      .object({
+        name: z.string().describe('Skill name without the .md extension.'),
+      })
+      .strict(),
+    handler: async (input) => {
+      const path = resolveSkillPath(executor, input.name);
+      if (!existsSync(path)) {
+        throw new McpToolError('OBJECT_NOT_FOUND', `Skill "${input.name}" does not exist.`, {
+          hint: 'Call list_skills to see existing skills, or write_skill to create one.',
+        });
+      }
+      const content = readFileSync(path, 'utf-8');
+      return { name: input.name, path, content };
+    },
+  });
+}
+
+function writeSkill(executor: Executor) {
+  return tool({
+    name: 'write_skill',
+    description:
+      'Create or update a markdown skill. Use mode="replace" (default) to overwrite, or mode="append" to add to the end. Persist dataset knowledge here (query recipes, schema rules, business logic the user has shared) so it survives across sessions.',
+    inputSchema: z
+      .object({
+        name: z.string().describe('Skill name without .md. Letters/digits/_/- only.'),
+        content: z.string().describe('Markdown body. Should start with a `# Heading` line.'),
+        mode: z.enum(['replace', 'append']).default('replace'),
+      })
+      .strict(),
+    handler: async (input) => {
+      const path = resolveSkillPath(executor, input.name);
+      let final = input.content;
+      if (input.mode === 'append' && existsSync(path)) {
+        const existing = readFileSync(path, 'utf-8');
+        const sep = existing.endsWith('\n') ? '' : '\n';
+        final = existing + sep + '\n' + input.content;
+      }
+      if (!final.endsWith('\n')) final += '\n';
+      writeFileSync(path, final, 'utf-8');
+      return {
+        name: input.name,
+        path,
+        bytes_written: Buffer.byteLength(final, 'utf-8'),
+        mode: input.mode,
+      };
+    },
+  });
+}
+
+function deleteSkill(executor: Executor) {
+  return tool({
+    name: 'delete_skill',
+    description: 'Permanently delete a saved skill. Confirm with the user before calling.',
+    inputSchema: z.object({ name: z.string() }).strict(),
+    handler: async (input) => {
+      const path = resolveSkillPath(executor, input.name);
+      if (!existsSync(path)) {
+        throw new McpToolError('OBJECT_NOT_FOUND', `Skill "${input.name}" does not exist.`);
+      }
+      unlinkSync(path);
+      return { name: input.name, deleted: true };
     },
   });
 }

@@ -28,6 +28,8 @@ export interface ResolvedServer {
   isDefault: boolean;
   readOnly: boolean;
   host: string;
+  description?: string;
+  tags?: string[];
 }
 
 export interface Executor {
@@ -35,4 +37,7 @@ export interface Executor {
   resolve(name?: string): ResolvedServer;
   exec(serverName: string, sql: string, opts?: ExecOpts): Promise<ExecResult>;
   shutdown(): Promise<void>;
+  // Directory where the skill/notes markdown files live. Tools manage
+  // this directory so Claude can persist dataset knowledge across sessions.
+  skillsDir(): string;
 }
