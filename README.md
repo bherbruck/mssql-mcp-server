@@ -32,6 +32,24 @@ Config is hot-reloaded — adding/removing servers is picked up immediately. The
 
 ### Standalone (Claude Desktop, other MCP clients)
 
+Three ways to point the server at a config. Pick whichever fits the client.
+
+**1. Config file on disk** — uses `~/.config/mssql-mcp-server/config.yaml` by default; override with `--config` or `$MSSQL_MCP_CONFIG`. Hot-reloads on save. Either YAML or JSON works (JSON is valid YAML 1.2).
+
+```json
+{
+  "mcpServers": {
+    "mssql": {
+      "command": "npx",
+      "args": ["-y", "github:bherbruck/mssql-mcp-server", "--config", "/abs/path/to/db.json"],
+      "env": { "PROD_SQL_PASSWORD": "..." }
+    }
+  }
+}
+```
+
+**2. Inline JSON via env var** — zero external files, the whole config sits in the MCP client's own JSON. No hot reload (it's frozen at process start).
+
 ```json
 {
   "mcpServers": {
@@ -39,15 +57,28 @@ Config is hot-reloaded — adding/removing servers is picked up immediately. The
       "command": "npx",
       "args": ["-y", "github:bherbruck/mssql-mcp-server"],
       "env": {
-        "PROD_SQL_PASSWORD": "...",
-        "ANALYTICS_PASSWORD": "..."
+        "MSSQL_MCP_CONFIG_JSON": "{\"servers\":{\"prod\":{\"host\":\"sql.example.com\",\"database\":\"Sales\",\"auth\":{\"kind\":\"sql\",\"username\":\"claude_reader\",\"password\":\"hunter2\"}}}}"
       }
     }
   }
 }
 ```
 
-Config is read from `$MSSQL_MCP_CONFIG` if set, else `~/.config/mssql-mcp-server/config.yaml`. Pass `--config <path>` to override.
+**3. Inline JSON via CLI flag** — same idea, but the JSON travels in `args` instead of `env`. Equivalent to option 2.
+
+```json
+{
+  "mcpServers": {
+    "mssql": {
+      "command": "npx",
+      "args": [
+        "-y", "github:bherbruck/mssql-mcp-server",
+        "--config-json", "{\"servers\":{\"prod\":{...}}}"
+      ]
+    }
+  }
+}
+```
 
 ### From source
 

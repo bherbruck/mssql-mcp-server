@@ -68,11 +68,22 @@ export function loadConfig(path: string): AppConfig {
         `or copy config.example.yaml from https://github.com/bherbruck/mssql-mcp-server.`,
     );
   }
+  // YAML 1.2 is a JSON superset, so parseYaml handles both `.yaml` and
+  // `.json` configs with the same code path.
   const raw = readFileSync(path, 'utf-8');
-  const parsed = parseYaml(raw);
+  return parseConfigText(raw, path);
+}
+
+export function parseConfigText(raw: string, source = 'inline'): AppConfig {
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(raw);
+  } catch (err) {
+    throw new Error(`Failed to parse config (${source}): ${err instanceof Error ? err.message : String(err)}`);
+  }
   const result = AppConfigSchema.safeParse(parsed);
   if (!result.success) {
-    throw new Error(`Invalid config (${path}):\n${result.error.toString()}`);
+    throw new Error(`Invalid config (${source}):\n${result.error.toString()}`);
   }
   return result.data;
 }

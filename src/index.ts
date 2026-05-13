@@ -5,20 +5,33 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { ZodObject, ZodRawShape } from 'zod';
-import { defaultConfigPath } from './config.js';
-import { MssqlExecutor } from './pool.js';
+import { defaultConfigPath, parseConfigText } from './config.js';
+import { MssqlExecutor, type ExecutorSource } from './pool.js';
 import { buildTools } from './tools.js';
 import { McpToolError } from './errors.js';
 
-function getConfigPath(): string {
-  const i = process.argv.indexOf('--config');
-  if (i >= 0 && process.argv[i + 1]) return process.argv[i + 1]!;
-  if (process.env.MSSQL_MCP_CONFIG) return process.env.MSSQL_MCP_CONFIG;
-  return defaultConfigPath();
+function getArg(flag: string): string | undefined {
+  const i = process.argv.indexOf(flag);
+  return i >= 0 ? process.argv[i + 1] : undefined;
+}
+
+// Inline (zero-file) setup: pass the entire config as JSON via `--config-json
+// '<json>'` or the MSSQL_MCP_CONFIG_JSON env var. Useful for one-off MCP
+// installs where the user wants everything in their MCP client config and no
+// extra file on disk.
+function getExecutorSource(): ExecutorSource {
+  const inlineArg = getArg('--config-json');
+  const inlineEnv = process.env.MSSQL_MCP_CONFIG_JSON;
+  const inline = inlineArg ?? inlineEnv;
+  if (inline) {
+    return { kind: 'inline', config: parseConfigText(inline, '--config-json') };
+  }
+  const path = getArg('--config') ?? process.env.MSSQL_MCP_CONFIG ?? defaultConfigPath();
+  return { kind: 'file', path };
 }
 
 export async function main(): Promise<void> {
-  const executor = new MssqlExecutor(getConfigPath());
+  const executor = new MssqlExecutor(getExecutorSource());
   const tools = buildTools(executor);
 
   const server = new McpServer({

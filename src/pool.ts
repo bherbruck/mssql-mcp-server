@@ -14,19 +14,36 @@ import { McpToolError, toToolError } from './errors.js';
 import { canonicalType, normalizeRow } from './format.js';
 import type { ExecOpts, ExecResult, Executor, ResolvedServer } from './executor.js';
 
+export type ExecutorSource =
+  | { kind: 'file'; path: string }
+  | { kind: 'inline'; config: AppConfig; skillsDir?: string };
+
 export class MssqlExecutor implements Executor {
   private pools = new Map<string, sql.ConnectionPool>();
   private config: AppConfig | null = null;
   private watcher: FSWatcher | null = null;
   private reloadTimer: NodeJS.Timeout | null = null;
+  private configPath: string | null;
+  private skillsDirOverride: string | null;
 
-  constructor(private configPath: string) {
-    this.reload();
-    this.startWatcher();
+  constructor(source: ExecutorSource) {
+    if (source.kind === 'file') {
+      this.configPath = source.path;
+      this.skillsDirOverride = null;
+      this.reload();
+      this.startWatcher();
+    } else {
+      this.configPath = null;
+      this.config = source.config;
+      this.skillsDirOverride = source.skillsDir ?? null;
+    }
   }
 
   skillsDir(): string {
-    return join(dirname(this.configPath), 'skills');
+    if (this.skillsDirOverride) return this.skillsDirOverride;
+    if (this.configPath) return join(dirname(this.configPath), 'skills');
+    // Inline-config fallback — same default as defaultConfigPath()'s parent.
+    return join(process.env.HOME ?? process.env.USERPROFILE ?? '.', '.config', 'mssql-mcp-server', 'skills');
   }
 
   listServers(): ResolvedServer[] {
@@ -160,6 +177,7 @@ export class MssqlExecutor implements Executor {
   // Re-read the config file. Tolerant of missing/invalid files: keeps the
   // last good config in memory so a typo while saving doesn't kill the server.
   private reload(): void {
+    if (!this.configPath) return; // inline mode — nothing to reload
     if (!existsSync(this.configPath)) {
       // First-run case (no config yet) — leave this.config null so tools
       // emit a friendly error pointing at /mssql:add-server.
@@ -190,6 +208,7 @@ export class MssqlExecutor implements Executor {
   }
 
   private startWatcher(): void {
+    if (!this.configPath) return;
     try {
       // Use fs.watch on the directory and filter by basename — watching the
       // file directly fails on editors that rename-on-save (vim, atomic
