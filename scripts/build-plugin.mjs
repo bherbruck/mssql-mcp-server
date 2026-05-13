@@ -13,6 +13,7 @@ import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import AdmZip from 'adm-zip';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const stage = join(root, 'dist', 'plugin-stage');
@@ -79,16 +80,11 @@ async function main() {
   manifest.version = version;
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + '\n');
 
-  // 3. Zip into .plugin
+  // 3. Zip into .plugin (pure-JS so the build works without a system `zip`)
   const pluginFile = join(out, 'mssql-mcp-server.plugin');
-  const zipResult = spawnSync(
-    'zip',
-    ['-r', '-q', pluginFile, '.', '-x', '*.DS_Store'],
-    { cwd: stage, stdio: 'inherit' }
-  );
-  if (zipResult.status !== 0) {
-    throw new Error('zip failed');
-  }
+  const zip = new AdmZip();
+  zip.addLocalFolder(stage);
+  zip.writeZip(pluginFile);
 
   // Sanity check the bundle exists
   if (!existsSync(pluginFile)) {
