@@ -1,0 +1,45 @@
+# mssql-mcp-server configuration
+#
+# Copy to `config.yaml` and edit. Pass with --config <path> when starting the server,
+# or set MSSQL_MCP_CONFIG=<path> in the environment.
+
+default_server: prod
+
+defaults:
+  max_rows: 1000          # truncation cap for every query unless overridden per-call
+  timeout_ms: 30000       # request timeout
+  read_only: true         # informational only — actual enforcement comes from your SQL login's permissions
+
+servers:
+
+  # SQL Server with SQL authentication (cross-platform; uses tedious under the hood)
+  prod:
+    host: prod-sql.company.com
+    port: 1433
+    database: Sales
+    auth:
+      kind: sql
+      username: claude_reader
+      password_env: PROD_SQL_PASSWORD   # name of the env var holding the password
+    read_only: true
+    encrypt: true
+    trust_server_certificate: false
+
+  # Analytics warehouse, custom limits
+  analytics:
+    host: warehouse.company.com
+    database: Analytics
+    auth:
+      kind: sql
+      username: claude_reader
+      password_env: ANALYTICS_PASSWORD
+    max_rows: 5000
+
+  # Windows / integrated auth (requires the optional `msnodesqlv8` peer install
+  # AND a Windows host — see README "Windows authentication" section).
+  scratch:
+    host: localhost\SQLEXPRESS
+    database: Sandbox
+    auth:
+      kind: windows
+    read_only: false

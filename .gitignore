@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Test / coverage
+coverage/
+.vitest-cache/
+
+# Local config & secrets
+config.yaml
+config.local.*
+.env
+.env.*
+
+# Bootstrap / archives
+*.tar.gz
+*.tgz
+
+# Logs & OS cruft
+*.log
+.DS_Store
+Thumbs.db
+.npm/
+
+# Editor
+.vscode/
+.idea/
