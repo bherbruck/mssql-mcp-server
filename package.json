@@ -1,6 +1,6 @@
 {
   "name": "mssql-mcp-server",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Model Context Protocol server for Microsoft SQL Server with multi-instance support.",
   "type": "module",
   "bin": {

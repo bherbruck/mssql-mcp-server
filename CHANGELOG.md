@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/bherbruck/mssql-mcp-server/compare/v0.4.1...v0.5.0) (2026-05-13)
+
+
+### Features
+
+* inline JSON config for one-off MCP setups ([3174893](https://github.com/bherbruck/mssql-mcp-server/commit/3174893cbe47d9b9ffecaadaa950e74ff4512452))
+
 ## [0.4.1](https://github.com/bherbruck/mssql-mcp-server/compare/v0.4.0...v0.4.1) (2026-05-13)
 
 
