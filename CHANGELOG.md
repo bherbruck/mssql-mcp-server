@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/bherbruck/mssql-mcp-server/compare/v0.3.1...v0.4.0) (2026-05-13)
+
+
+### Features
+
+* persistent markdown skill notebook for dataset knowledge ([b2a47b2](https://github.com/bherbruck/mssql-mcp-server/commit/b2a47b2ae506abfa6d40593505d4c1b797a1f411))
+
 ## [0.3.1](https://github.com/bherbruck/mssql-mcp-server/compare/v0.3.0...v0.3.1) (2026-05-13)
 
 
