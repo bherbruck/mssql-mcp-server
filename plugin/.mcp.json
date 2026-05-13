@@ -1,9 +1,10 @@
 {
   "mcpServers": {
     "mssql": {
-      "command": "node",
+      "command": "npx",
       "args": [
-        "${CLAUDE_PLUGIN_ROOT}/server.js",
+        "-y",
+        "github:bherbruck/mssql-mcp-server",
         "--config",
         "${MSSQL_MCP_CONFIG}"
       ],
