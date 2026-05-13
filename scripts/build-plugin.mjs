@@ -29,7 +29,10 @@ async function main() {
   await mkdir(stage, { recursive: true });
   await mkdir(out, { recursive: true });
 
-  // 1. Bundle the server with esbuild
+  // 1. Bundle our src with esbuild. Node deps are kept external — esbuild
+  // chokes on some transitive deps under mssql (lodash.includes, safer-buffer,
+  // ecdsa-sig-formatter) and bundling adds no value when the .plugin zip can
+  // ship node_modules alongside server.js.
   await build({
     entryPoints: [join(root, 'src', 'index.ts')],
     bundle: true,
@@ -37,9 +40,7 @@ async function main() {
     target: 'node20',
     format: 'esm',
     outfile: join(stage, 'server.js'),
-    // msnodesqlv8 is a native module for optional Windows auth — exclude from
-    // the bundle. SQL auth via tedious is pure JS and bundles fine.
-    external: ['msnodesqlv8'],
+    packages: 'external',
     // ESM compatibility shims for CommonJS deps
     banner: {
       js: `import { createRequire as __createRequire } from 'node:module';\nconst require = __createRequire(import.meta.url);`,
@@ -49,8 +50,28 @@ async function main() {
     sourcemap: false,
   });
 
-  // 2. Stage plugin files
+  // 2. Stage plugin files (manifest, skills, README, sample config)
   await cp(join(root, 'plugin'), stage, { recursive: true });
+
+  // 2b. Drop a minimal package.json into stage and install prod deps so that
+  // server.js can `import 'mssql'` at runtime via Node's resolver.
+  const stagePkg = {
+    name: 'mssql-mcp-server-plugin',
+    version,
+    private: true,
+    type: 'module',
+    dependencies: pkg.dependencies,
+  };
+  await writeFile(join(stage, 'package.json'), JSON.stringify(stagePkg, null, 2) + '\n');
+  console.log('Installing production deps into plugin stage…');
+  const npmResult = spawnSync(
+    'npm',
+    ['install', '--omit=dev', '--no-audit', '--no-fund', '--no-package-lock', '--loglevel=error'],
+    { cwd: stage, stdio: 'inherit' }
+  );
+  if (npmResult.status !== 0) {
+    throw new Error('npm install in plugin stage failed');
+  }
 
   // Sync version into plugin.json (in case release-please missed it)
   const manifestPath = join(stage, '.claude-plugin', 'plugin.json');
