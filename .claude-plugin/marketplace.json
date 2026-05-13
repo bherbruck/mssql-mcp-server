@@ -9,9 +9,15 @@
       "name": "mssql-mcp-server",
       "source": "./plugin",
       "description": "Query one or more Microsoft SQL Server instances from Claude. Schema discovery, parameterized queries, and chart-ready JSON for live dashboards.",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "category": "database",
-      "tags": ["mssql", "sql-server", "mcp", "database", "analytics"],
+      "tags": [
+        "mssql",
+        "sql-server",
+        "mcp",
+        "database",
+        "analytics"
+      ],
       "license": "MIT",
       "homepage": "https://github.com/bherbruck/mssql-mcp-server"
     }
