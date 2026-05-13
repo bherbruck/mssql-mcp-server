@@ -19,8 +19,14 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run build:plugin
+      - run: npm run build:mcpb
       - uses: actions/upload-artifact@v4
         with:
           name: mssql-mcp-server-plugin
           path: dist/plugin/*.plugin
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mssql-mcp-server-mcpb
+          path: dist/mcpb/*.mcpb
           retention-days: 14

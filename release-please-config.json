@@ -16,6 +16,11 @@
           "type": "json",
           "path": ".claude-plugin/marketplace.json",
           "jsonpath": "$.plugins[0].version"
+        },
+        {
+          "type": "json",
+          "path": "mcpb/manifest.json",
+          "jsonpath": "$.version"
         }
       ]
     }

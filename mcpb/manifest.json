@@ -1,0 +1,126 @@
+{
+  "manifest_version": "0.2",
+  "name": "mssql-mcp-server",
+  "display_name": "Microsoft SQL Server",
+  "version": "0.6.0",
+  "description": "Query Microsoft SQL Server from Claude. Schema discovery, parameterized queries, chart-ready JSON.",
+  "long_description": "An MCP server that lets Claude discover schemas, run queries, and build live dashboards across one or more Microsoft SQL Server instances. Read-only by default; writes are gated behind a config flag and an explicit confirm token. Predictable JSON output, no SQL parser between Claude and the database.",
+  "author": {
+    "name": "bherbruck",
+    "url": "https://github.com/bherbruck"
+  },
+  "homepage": "https://github.com/bherbruck/mssql-mcp-server",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bherbruck/mssql-mcp-server"
+  },
+  "license": "MIT",
+  "keywords": ["mssql", "sql-server", "database", "analytics"],
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"],
+      "env": {
+        "MSSQL_HOST": "${user_config.host}",
+        "MSSQL_PORT": "${user_config.port}",
+        "MSSQL_DATABASE": "${user_config.database}",
+        "MSSQL_USER": "${user_config.username}",
+        "MSSQL_PASSWORD": "${user_config.password}",
+        "MSSQL_AUTH": "${user_config.auth}",
+        "MSSQL_NAME": "${user_config.alias}",
+        "MSSQL_READ_ONLY": "${user_config.read_only}",
+        "MSSQL_ENCRYPT": "${user_config.encrypt}",
+        "MSSQL_TRUST_SERVER_CERTIFICATE": "${user_config.trust_server_certificate}"
+      }
+    }
+  },
+  "user_config": {
+    "host": {
+      "type": "string",
+      "title": "SQL Server host",
+      "description": "Hostname or IP. Examples: sql-prod.company.com, localhost, localhost\\\\SQLEXPRESS",
+      "required": true
+    },
+    "port": {
+      "type": "number",
+      "title": "Port",
+      "description": "TCP port (default 1433).",
+      "default": 1433,
+      "required": false
+    },
+    "database": {
+      "type": "string",
+      "title": "Default database",
+      "description": "Database to use unless a tool call overrides it.",
+      "required": true
+    },
+    "auth": {
+      "type": "string",
+      "title": "Authentication",
+      "description": "sql: SQL login (cross-platform). windows: integrated auth (Windows host only, requires msnodesqlv8).",
+      "default": "sql",
+      "required": false
+    },
+    "username": {
+      "type": "string",
+      "title": "Username",
+      "description": "SQL login. Ignored when auth=windows.",
+      "required": false
+    },
+    "password": {
+      "type": "string",
+      "title": "Password",
+      "description": "SQL login password. Ignored when auth=windows.",
+      "sensitive": true,
+      "required": false
+    },
+    "alias": {
+      "type": "string",
+      "title": "Connection alias",
+      "description": "Short name passed as `server` to tools. Defaults to 'default'.",
+      "default": "default",
+      "required": false
+    },
+    "read_only": {
+      "type": "boolean",
+      "title": "Read-only",
+      "description": "Disables execute_write. Informational — real protection comes from the SQL login's permissions.",
+      "default": true,
+      "required": false
+    },
+    "encrypt": {
+      "type": "boolean",
+      "title": "Encrypt connection",
+      "description": "Use TLS for the connection. Recommended.",
+      "default": true,
+      "required": false
+    },
+    "trust_server_certificate": {
+      "type": "boolean",
+      "title": "Trust self-signed cert",
+      "description": "Skip TLS cert validation. Use for self-signed certs in dev/intranet only.",
+      "default": false,
+      "required": false
+    }
+  },
+  "tools": [
+    { "name": "list_servers", "description": "List configured connections." },
+    { "name": "get_server_info", "description": "Version, current login, default schema." },
+    { "name": "list_databases", "description": "Databases on the server." },
+    { "name": "list_schemas", "description": "Schemas in a database." },
+    { "name": "list_objects", "description": "Tables and views in a schema." },
+    { "name": "describe_object", "description": "Columns, primary key, indexes, foreign keys for one table or view." },
+    { "name": "search_objects", "description": "Fuzzy search across table, view, and column names." },
+    { "name": "sample_rows", "description": "Peek at up to 50 real rows." },
+    { "name": "column_stats", "description": "Distribution stats for one column." },
+    { "name": "explain_query", "description": "Estimated query plan." },
+    { "name": "query", "description": "Run a SQL statement, returns columns + rows." },
+    { "name": "execute_write", "description": "Run a write statement (gated by read_only=false + sha256 confirm token)." },
+    { "name": "list_skills", "description": "List saved markdown notes/skills about this dataset." },
+    { "name": "read_skill", "description": "Read one saved skill markdown file." },
+    { "name": "write_skill", "description": "Create or update a saved skill markdown file." },
+    { "name": "delete_skill", "description": "Delete a saved skill." }
+  ]
+}

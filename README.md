@@ -30,7 +30,11 @@ Other connector commands:
 
 Config is hot-reloaded — adding/removing servers is picked up immediately. The only thing that needs a restart is setting a new `password_env` env var, since env vars are inherited at process start.
 
-### Standalone (Claude Desktop, other MCP clients)
+### Claude Desktop — one-click install (.mcpb)
+
+Grab the latest `mssql-mcp-server.mcpb` from [Releases](https://github.com/bherbruck/mssql-mcp-server/releases/latest) and double-click. Claude Desktop opens a form to fill in host, database, login, and password. Install. Done. No JSON editing, no `npx` cold start, no global node install — Desktop ships its own runtime.
+
+### Standalone (Claude Desktop manual, other MCP clients)
 
 Four ways to configure, listed simplest first. Pick whichever fits.
 
