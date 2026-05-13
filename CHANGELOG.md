@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/bherbruck/mssql-mcp-server/compare/v0.3.0...v0.3.1) (2026-05-13)
+
+
+### Bug Fixes
+
+* rewrite describe_object indexes query, add FKs, hot-reload config ([8564ae2](https://github.com/bherbruck/mssql-mcp-server/commit/8564ae2cd91ef22f1fc468249c1ae46a55ff76fb))
+
 ## [0.3.0](https://github.com/bherbruck/mssql-mcp-server/compare/v0.2.0...v0.3.0) (2026-05-13)
 
 
