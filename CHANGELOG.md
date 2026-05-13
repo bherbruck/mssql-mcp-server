@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/bherbruck/mssql-mcp-server/compare/v0.4.0...v0.4.1) (2026-05-13)
+
+
+### Bug Fixes
+
+* bracket reserved-word alias [clustered] in describe_object indexes query ([cc03278](https://github.com/bherbruck/mssql-mcp-server/commit/cc03278ad8b328e191c54d1bd2cb6b7ebe99fae4))
+
 ## [0.4.0](https://github.com/bherbruck/mssql-mcp-server/compare/v0.3.1...v0.4.0) (2026-05-13)
 
 
