@@ -1,6 +1,6 @@
 {
   "name": "mssql-mcp-server",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Query one or more Microsoft SQL Server instances from Claude. Schema discovery, parameterized queries, and chart-ready JSON for live dashboards.",
   "author": {
     "name": "mssql-mcp-server contributors"

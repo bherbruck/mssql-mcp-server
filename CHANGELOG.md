@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/bherbruck/mssql-mcp-server/compare/v0.6.0...v0.7.0) (2026-05-13)
+
+
+### Features
+
+* ship Claude Desktop .mcpb bundle alongside .plugin ([74cb50f](https://github.com/bherbruck/mssql-mcp-server/commit/74cb50f3b058c7326561a1a4e212f5b1421a4259))
+
 ## [0.6.0](https://github.com/bherbruck/mssql-mcp-server/compare/v0.5.0...v0.6.0) (2026-05-13)
 
 
