@@ -67,6 +67,5 @@ For Windows auth, replace the `auth:` block with `auth: { kind: windows }` and n
 After writing, show the user:
 1. The path you wrote to
 2. The new server entry
-3. **Important:** They must restart Claude Code (or reconnect the MCP server) for the new connection to be picked up — the MCP server loads config at startup.
 
-If they used `password_env`, remind them to set that env var before restart.
+The MCP server watches this file and hot-reloads on save — the new connection is usable immediately, no restart needed. If they used `password_env`, remind them to export that env var (env vars *do* require a restart since the MCP server inherits its env from the parent process).

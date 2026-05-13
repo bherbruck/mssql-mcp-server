@@ -145,25 +145,69 @@ function freshStub(): StubExecutor {
     rows: [{ column_name: 'order_id' }],
   }));
 
-  // describe_object: indexes
+  // describe_object: denormalized index_columns
   stub.on(
-    (s) => /FROM sys\.indexes i/i.test(s) && /columns_csv/i.test(s),
+    (s) => /FROM sys\.indexes i/i.test(s) && /index_column_id/i.test(s),
     () => ({
-      columns: [{ name: 'name', type: 'nvarchar' }],
+      columns: [
+        { name: 'index_name', type: 'nvarchar' },
+        { name: 'unique', type: 'bit' },
+        { name: 'clustered', type: 'bit' },
+        { name: 'type', type: 'nvarchar' },
+        { name: 'column_name', type: 'nvarchar' },
+        { name: 'is_included_column', type: 'bit' },
+      ],
       rows: [
         {
-          name: 'PK_Orders',
+          index_name: 'PK_Orders',
           unique: true,
           clustered: true,
           type: 'CLUSTERED',
-          columns_csv: 'order_id',
+          column_name: 'order_id',
+          is_included_column: false,
         },
         {
-          name: 'IX_Orders_Region',
+          index_name: 'IX_Orders_Region',
           unique: false,
           clustered: false,
           type: 'NONCLUSTERED',
-          columns_csv: 'region',
+          column_name: 'region',
+          is_included_column: false,
+        },
+        {
+          index_name: 'IX_Orders_Region',
+          unique: false,
+          clustered: false,
+          type: 'NONCLUSTERED',
+          column_name: 'total',
+          is_included_column: true,
+        },
+      ],
+    }),
+  );
+
+  // describe_object: foreign keys (denormalized; aggregated in JS)
+  stub.on(
+    (s) => /FROM sys\.foreign_keys fk/i.test(s),
+    () => ({
+      columns: [
+        { name: 'fk_name', type: 'nvarchar' },
+        { name: 'on_delete', type: 'nvarchar' },
+        { name: 'on_update', type: 'nvarchar' },
+        { name: 'ref_schema', type: 'nvarchar' },
+        { name: 'ref_table', type: 'nvarchar' },
+        { name: 'column_name', type: 'nvarchar' },
+        { name: 'ref_column', type: 'nvarchar' },
+      ],
+      rows: [
+        {
+          fk_name: 'FK_Orders_Customers',
+          on_delete: 'NO_ACTION',
+          on_update: 'NO_ACTION',
+          ref_schema: 'dbo',
+          ref_table: 'Customers',
+          column_name: 'customer_id',
+          ref_column: 'customer_id',
         },
       ],
     }),
@@ -348,7 +392,7 @@ describe('list_objects', () => {
 });
 
 describe('describe_object', () => {
-  it('returns columns, primary key, and indexes', async () => {
+  it('returns columns, primary key, indexes, and foreign keys', async () => {
     const stub = freshStub();
     const t = getTool(stub, 'describe_object');
     const r = (await t.handler({ name: 'Orders' })) as Record<string, unknown>;
@@ -360,9 +404,20 @@ describe('describe_object', () => {
     expect(cols[2]?.type).toBe('decimal(12,2)');
     expect(cols[3]?.type).toBe('nvarchar(32)'); // 64 bytes / 2 = 32 chars
     expect(r.primary_key).toEqual(['order_id']);
+
     const indexes = r.indexes as Array<Record<string, unknown>>;
     expect(indexes).toHaveLength(2);
     expect(indexes[0]?.columns).toEqual(['order_id']);
+    expect(indexes[0]?.included_columns).toEqual([]);
+    expect(indexes[1]?.columns).toEqual(['region']);
+    expect(indexes[1]?.included_columns).toEqual(['total']);
+
+    const fks = r.foreign_keys as Array<Record<string, unknown>>;
+    expect(fks).toHaveLength(1);
+    expect(fks[0]?.name).toBe('FK_Orders_Customers');
+    expect(fks[0]?.columns).toEqual(['customer_id']);
+    expect(fks[0]?.ref_table).toBe('Customers');
+    expect(fks[0]?.ref_columns).toEqual(['customer_id']);
   });
 
   it('errors when object is missing', async () => {

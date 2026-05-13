@@ -19,4 +19,4 @@ Help the user remove a server entry from their mssql-mcp-server config.
 
 5. **Rewrite the YAML** without that server. If the removed server was `default_server`, clear that key (or set it to another server if one remains and the user agrees).
 
-6. **Tell the user** to restart Claude Code so the MCP server reloads the config.
+6. **Confirm** the server entry is gone. The MCP server hot-reloads the config on save, so the change takes effect immediately — no restart needed.

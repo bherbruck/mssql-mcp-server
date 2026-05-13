@@ -251,84 +251,8 @@ function describeObject(executor: Executor) {
     }).strict(),
     handler: async (input) => {
       const target = executor.resolve(input.server);
-
-      // Single batch — multiple result sets returned in order: meta, columns, pk, fks, indexes
-      const sqlBatch = `
-        DECLARE @schema sysname = @p_schema;
-        DECLARE @name   sysname = @p_name;
-        DECLARE @oid INT = OBJECT_ID(QUOTENAME(@schema) + '.' + QUOTENAME(@name));
-
-        SELECT
-          o.name,
-          CASE o.type WHEN 'U' THEN 'table' WHEN 'V' THEN 'view' END AS kind,
-          ISNULL((
-            SELECT SUM(ps.row_count) FROM sys.dm_db_partition_stats ps
-            WHERE ps.object_id = o.object_id AND ps.index_id IN (0,1)
-          ), 0) AS row_count_estimate,
-          OBJECT_DEFINITION(o.object_id) AS view_definition
-        FROM sys.objects o WHERE o.object_id = @oid;
-
-        SELECT
-          c.name,
-          t.name AS type_name,
-          c.max_length, c.precision, c.scale,
-          c.is_nullable AS nullable,
-          c.is_identity AS is_identity,
-          c.is_computed AS is_computed,
-          OBJECT_DEFINITION(c.default_object_id) AS [default],
-          CASE WHEN EXISTS (
-            SELECT 1 FROM sys.indexes i
-            JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
-            WHERE i.object_id = @oid AND i.is_primary_key = 1 AND ic.column_id = c.column_id
-          ) THEN 1 ELSE 0 END AS is_primary_key
-        FROM sys.columns c
-        JOIN sys.types t ON t.user_type_id = c.user_type_id
-        WHERE c.object_id = @oid
-        ORDER BY c.column_id;
-
-        SELECT c.name AS column_name
-        FROM sys.indexes i
-        JOIN sys.index_columns ic ON ic.object_id = i.object_id AND ic.index_id = i.index_id
-        JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
-        WHERE i.object_id = @oid AND i.is_primary_key = 1
-        ORDER BY ic.key_ordinal;
-
-        SELECT
-          fk.name AS [name],
-          rs.name AS ref_schema,
-          ro.name AS ref_table,
-          fk.delete_referential_action_desc AS on_delete,
-          fk.update_referential_action_desc AS on_update,
-          (
-            SELECT c.name FROM sys.foreign_key_columns fkc
-            JOIN sys.columns c ON c.object_id = fkc.parent_object_id AND c.column_id = fkc.parent_column_id
-            WHERE fkc.constraint_object_id = fk.object_id
-            ORDER BY fkc.constraint_column_id
-            FOR JSON PATH
-          ) AS columns_json,
-          (
-            SELECT c.name FROM sys.foreign_key_columns fkc
-            JOIN sys.columns c ON c.object_id = fkc.referenced_object_id AND c.column_id = fkc.referenced_column_id
-            WHERE fkc.constraint_object_id = fk.object_id
-            ORDER BY fkc.constraint_column_id
-            FOR JSON PATH
-          ) AS ref_columns_json
-        FROM sys.foreign_keys fk
-        JOIN sys.objects ro ON ro.object_id = fk.referenced_object_id
-        JOIN sys.schemas rs ON rs.schema_id = ro.schema_id
-        WHERE fk.parent_object_id = @oid;
-
-        SELECT
-          i.name,
-          i.is_unique AS [unique],
-          CASE i.type WHEN 1 THEN 1 ELSE 0 END AS clustered,
-          i.type_desc AS [type]
-        FROM sys.indexes i
-        WHERE i.object_id = @oid AND i.type > 0;
-      `;
-      // Run, then we'll reshape. We need to access additional result sets
-      // from the underlying driver. Our Executor only returns the first set
-      // today — so we issue a smaller, denormalized query instead for now:
+      const params = { schema: input.schema, name: input.name };
+      const dbOpts = { database: input.database, params };
 
       const cols = await executor.exec(
         target.name,
@@ -345,7 +269,7 @@ function describeObject(executor: Executor) {
          JOIN sys.types t ON t.user_type_id = c.user_type_id
          WHERE s.name = @schema AND o.name = @name
          ORDER BY c.column_id`,
-        { database: input.database, params: { schema: input.schema, name: input.name } },
+        dbOpts,
       );
 
       if (cols.rows.length === 0) {
@@ -369,7 +293,7 @@ function describeObject(executor: Executor) {
          FROM sys.objects o
          JOIN sys.schemas s ON s.schema_id = o.schema_id
          WHERE s.name = @schema AND o.name = @name`,
-        { database: input.database, params: { schema: input.schema, name: input.name } },
+        dbOpts,
       );
 
       const pk = await executor.exec(
@@ -382,27 +306,59 @@ function describeObject(executor: Executor) {
          JOIN sys.schemas s ON s.schema_id = o.schema_id
          WHERE i.is_primary_key = 1 AND s.name = @schema AND o.name = @name
          ORDER BY ic.key_ordinal`,
-        { database: input.database, params: { schema: input.schema, name: input.name } },
+        dbOpts,
       );
 
-      const indexes = await executor.exec(
+      // Denormalized index_columns: aggregate per index in JS. Avoids the
+      // STUFF/FOR XML PATH idiom which some SQL Server versions/compat levels
+      // reject ("Incorrect syntax near 'ORDER'"). Cross-version safe and
+      // gives us included_columns separately.
+      const indexRows = await executor.exec(
         target.name,
         `SELECT
-           i.name,
+           i.name AS index_name,
            i.is_unique AS [unique],
            CASE i.type WHEN 1 THEN 1 ELSE 0 END AS clustered,
            i.type_desc AS [type],
-           STUFF((
-             SELECT ',' + c.name FROM sys.index_columns ic
-             JOIN sys.columns c ON c.object_id = ic.object_id AND c.column_id = ic.column_id
-             WHERE ic.object_id = i.object_id AND ic.index_id = i.index_id AND ic.is_included_column = 0
-             ORDER BY ic.key_ordinal FOR XML PATH('')
-           ), 1, 1, '') AS columns_csv
+           c.name AS column_name,
+           ic.is_included_column,
+           ic.key_ordinal,
+           ic.index_column_id
          FROM sys.indexes i
          JOIN sys.objects o ON o.object_id = i.object_id
          JOIN sys.schemas s ON s.schema_id = o.schema_id
-         WHERE i.type > 0 AND s.name = @schema AND o.name = @name`,
-        { database: input.database, params: { schema: input.schema, name: input.name } },
+         LEFT JOIN sys.index_columns ic
+           ON ic.object_id = i.object_id AND ic.index_id = i.index_id
+         LEFT JOIN sys.columns c
+           ON c.object_id = ic.object_id AND c.column_id = ic.column_id
+         WHERE i.type > 0 AND s.name = @schema AND o.name = @name
+         ORDER BY i.index_id, ic.is_included_column, ic.key_ordinal, ic.index_column_id`,
+        dbOpts,
+      );
+
+      // FKs where this table is the parent. One row per (fk, column).
+      const fkRows = await executor.exec(
+        target.name,
+        `SELECT
+           fk.name AS fk_name,
+           fk.delete_referential_action_desc AS on_delete,
+           fk.update_referential_action_desc AS on_update,
+           rs.name AS ref_schema,
+           ro.name AS ref_table,
+           pc.name AS column_name,
+           rc.name AS ref_column,
+           fkc.constraint_column_id
+         FROM sys.foreign_keys fk
+         JOIN sys.objects po ON po.object_id = fk.parent_object_id
+         JOIN sys.schemas ps ON ps.schema_id = po.schema_id
+         JOIN sys.objects ro ON ro.object_id = fk.referenced_object_id
+         JOIN sys.schemas rs ON rs.schema_id = ro.schema_id
+         JOIN sys.foreign_key_columns fkc ON fkc.constraint_object_id = fk.object_id
+         JOIN sys.columns pc ON pc.object_id = fkc.parent_object_id AND pc.column_id = fkc.parent_column_id
+         JOIN sys.columns rc ON rc.object_id = fkc.referenced_object_id AND rc.column_id = fkc.referenced_column_id
+         WHERE ps.name = @schema AND po.name = @name
+         ORDER BY fk.name, fkc.constraint_column_id`,
+        dbOpts,
       );
 
       const m = meta.rows[0] ?? {};
@@ -430,20 +386,79 @@ function describeObject(executor: Executor) {
           };
         }),
         primary_key: pk.rows.length ? pk.rows.map((r) => (r as { column_name: string }).column_name) : null,
-        indexes: indexes.rows.map((r) => {
-          const obj = r as Record<string, unknown>;
-          return {
-            name: obj.name,
-            columns: typeof obj.columns_csv === 'string' ? obj.columns_csv.split(',') : [],
-            unique: !!obj.unique,
-            clustered: !!obj.clustered,
-            type: obj.type,
-          };
-        }),
+        indexes: aggregateIndexes(indexRows.rows),
+        foreign_keys: aggregateForeignKeys(fkRows.rows),
         view_definition: m.view_definition ?? null,
       };
     },
   });
+}
+
+interface IndexInfo {
+  name: string;
+  columns: string[];
+  included_columns: string[];
+  unique: boolean;
+  clustered: boolean;
+  type: unknown;
+}
+
+function aggregateIndexes(rows: Record<string, unknown>[]): IndexInfo[] {
+  const byName = new Map<string, IndexInfo>();
+  for (const r of rows) {
+    const name = String(r.index_name ?? '');
+    let entry = byName.get(name);
+    if (!entry) {
+      entry = {
+        name,
+        columns: [],
+        included_columns: [],
+        unique: !!r.unique,
+        clustered: !!r.clustered,
+        type: r.type,
+      };
+      byName.set(name, entry);
+    }
+    const col = r.column_name;
+    if (typeof col === 'string') {
+      if (r.is_included_column) entry.included_columns.push(col);
+      else entry.columns.push(col);
+    }
+  }
+  return [...byName.values()];
+}
+
+interface ForeignKeyInfo {
+  name: string;
+  columns: string[];
+  ref_schema: string;
+  ref_table: string;
+  ref_columns: string[];
+  on_delete: unknown;
+  on_update: unknown;
+}
+
+function aggregateForeignKeys(rows: Record<string, unknown>[]): ForeignKeyInfo[] {
+  const byName = new Map<string, ForeignKeyInfo>();
+  for (const r of rows) {
+    const name = String(r.fk_name ?? '');
+    let entry = byName.get(name);
+    if (!entry) {
+      entry = {
+        name,
+        columns: [],
+        ref_schema: String(r.ref_schema ?? ''),
+        ref_table: String(r.ref_table ?? ''),
+        ref_columns: [],
+        on_delete: r.on_delete,
+        on_update: r.on_update,
+      };
+      byName.set(name, entry);
+    }
+    if (typeof r.column_name === 'string') entry.columns.push(r.column_name);
+    if (typeof r.ref_column === 'string') entry.ref_columns.push(r.ref_column);
+  }
+  return [...byName.values()];
 }
 
 function typeName(raw: string, maxLength: number | null, precision: number | null, scale: number | null): string {

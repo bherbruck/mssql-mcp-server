@@ -5,7 +5,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { ZodObject, ZodRawShape } from 'zod';
-import { loadConfig, defaultConfigPath } from './config.js';
+import { defaultConfigPath } from './config.js';
 import { MssqlExecutor } from './pool.js';
 import { buildTools } from './tools.js';
 import { McpToolError } from './errors.js';
@@ -18,8 +18,7 @@ function getConfigPath(): string {
 }
 
 export async function main(): Promise<void> {
-  const config = loadConfig(getConfigPath());
-  const executor = new MssqlExecutor(config);
+  const executor = new MssqlExecutor(getConfigPath());
   const tools = buildTools(executor);
 
   const server = new McpServer({

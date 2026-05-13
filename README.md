@@ -28,7 +28,7 @@ Other connector commands:
 | `/mssql:remove-server [name]` | Delete a connection. |
 | `/mssql:test-connection [name]` | Round-trip check via `get_server_info`. |
 
-Restart Claude Code (or reconnect the MCP server) after adding/removing servers — config is read at startup.
+Config is hot-reloaded — adding/removing servers is picked up immediately. The only thing that needs a restart is setting a new `password_env` env var, since env vars are inherited at process start.
 
 ### Standalone (Claude Desktop, other MCP clients)
 
