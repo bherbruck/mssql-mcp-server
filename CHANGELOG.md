@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/bherbruck/mssql-mcp-server/compare/v0.5.0...v0.6.0) (2026-05-13)
+
+
+### Features
+
+* single-server setup via plain MSSQL_* env vars ([3abd9f2](https://github.com/bherbruck/mssql-mcp-server/commit/3abd9f25530ce8e949990179692623980303a1d2))
+
 ## [0.5.0](https://github.com/bherbruck/mssql-mcp-server/compare/v0.4.1...v0.5.0) (2026-05-13)
 
 
