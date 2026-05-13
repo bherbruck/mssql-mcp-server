@@ -2,13 +2,7 @@
   "mcpServers": {
     "mssql": {
       "command": "npx",
-      "args": [
-        "-y",
-        "github:bherbruck/mssql-mcp-server",
-        "--config",
-        "${MSSQL_MCP_CONFIG}"
-      ],
-      "env": {}
+      "args": ["-y", "github:bherbruck/mssql-mcp-server"]
     }
   }
 }

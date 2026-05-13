@@ -4,38 +4,40 @@ An MCP server that lets an LLM (Claude, etc.) discover schemas, run queries, and
 
 Design goals: predictable JSON, multi-server first, easy to install, no parser sitting between Claude and the database. Read-only enforcement is delegated to the SQL login's permissions — keep your read-only logins read-only.
 
-## Quick start
+## Install
 
-```bash
-# 1. Install
-npm install
-npm run build
+### As a Claude Code plugin (recommended)
 
-# 2. Configure
-cp config.example.yaml config.yaml
-$EDITOR config.yaml         # set hosts, databases, password env vars
-
-# 3. Run the smoke test (no database required)
-npm test
-
-# 4. Set passwords for any SQL-auth servers
-export PROD_SQL_PASSWORD='...'
-export ANALYTICS_PASSWORD='...'
-
-# 5. Start (typically launched by your MCP client, not by hand)
-npm start -- --config ./config.yaml
+```
+/plugin marketplace add bherbruck/mssql-mcp-server
+/plugin install mssql-mcp-server
 ```
 
-### Plug into Claude Desktop / Cowork / Claude Code
+Then add your first connection from inside Claude Code:
 
-Add to your MCP client config (path varies by client):
+```
+/mssql:add-server
+```
+
+Other connector commands:
+
+| Command | What it does |
+|---|---|
+| `/mssql:add-server [name]` | Wizard: host, db, auth, password. Writes to `~/.config/mssql-mcp-server/config.yaml`. |
+| `/mssql:list-servers` | Show every configured connection. |
+| `/mssql:remove-server [name]` | Delete a connection. |
+| `/mssql:test-connection [name]` | Round-trip check via `get_server_info`. |
+
+Restart Claude Code (or reconnect the MCP server) after adding/removing servers — config is read at startup.
+
+### Standalone (Claude Desktop, other MCP clients)
 
 ```json
 {
   "mcpServers": {
     "mssql": {
-      "command": "node",
-      "args": ["/absolute/path/to/mssql-mcp-server/dist/index.js", "--config", "/absolute/path/to/config.yaml"],
+      "command": "npx",
+      "args": ["-y", "github:bherbruck/mssql-mcp-server"],
       "env": {
         "PROD_SQL_PASSWORD": "...",
         "ANALYTICS_PASSWORD": "..."
@@ -45,7 +47,18 @@ Add to your MCP client config (path varies by client):
 }
 ```
 
-Once published to npm you can swap `command: node, args: [...]` for `command: npx, args: ["mssql-mcp-server", "--config", "..."]`.
+Config is read from `$MSSQL_MCP_CONFIG` if set, else `~/.config/mssql-mcp-server/config.yaml`. Pass `--config <path>` to override.
+
+### From source
+
+```bash
+git clone https://github.com/bherbruck/mssql-mcp-server
+cd mssql-mcp-server
+npm install
+npm run build
+npm test
+npm start -- --config ./config.yaml
+```
 
 ## Configuration
 

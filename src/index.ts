@@ -5,7 +5,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import type { ZodObject, ZodRawShape } from 'zod';
-import { loadConfig } from './config.js';
+import { loadConfig, defaultConfigPath } from './config.js';
 import { MssqlExecutor } from './pool.js';
 import { buildTools } from './tools.js';
 import { McpToolError } from './errors.js';
@@ -14,7 +14,7 @@ function getConfigPath(): string {
   const i = process.argv.indexOf('--config');
   if (i >= 0 && process.argv[i + 1]) return process.argv[i + 1]!;
   if (process.env.MSSQL_MCP_CONFIG) return process.env.MSSQL_MCP_CONFIG;
-  return 'config.yaml';
+  return defaultConfigPath();
 }
 
 export async function main(): Promise<void> {

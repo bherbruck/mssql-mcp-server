@@ -1,6 +1,12 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import { z } from 'zod';
+
+export function defaultConfigPath(): string {
+  return join(homedir(), '.config', 'mssql-mcp-server', 'config.yaml');
+}
 
 // Either `password` (plaintext) or `password_env` (env var name) must be set
 // for kind: sql. We don't enforce that here so the discriminated union stays
@@ -49,6 +55,13 @@ export type ServerConfig = z.infer<typeof ServerSchema>;
 export type AuthConfig = z.infer<typeof AuthSchema>;
 
 export function loadConfig(path: string): AppConfig {
+  if (!existsSync(path)) {
+    throw new Error(
+      `Config file not found: ${path}\n` +
+        `Run \`/mssql:add-server\` in Claude Code to create one, ` +
+        `or copy config.example.yaml from https://github.com/bherbruck/mssql-mcp-server.`,
+    );
+  }
   const raw = readFileSync(path, 'utf-8');
   const parsed = parseYaml(raw);
   const result = AppConfigSchema.safeParse(parsed);
