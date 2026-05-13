@@ -326,7 +326,7 @@ function describeObject(executor: Executor) {
         `SELECT
            i.name AS index_name,
            i.is_unique AS [unique],
-           CASE i.type WHEN 1 THEN 1 ELSE 0 END AS clustered,
+           CASE i.type WHEN 1 THEN 1 ELSE 0 END AS [clustered],
            i.type_desc AS [type],
            c.name AS column_name,
            ic.is_included_column,
