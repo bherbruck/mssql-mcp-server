@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/bherbruck/mssql-mcp-server/compare/v0.2.0...v0.3.0) (2026-05-13)
+
+
+### Features
+
+* connector slash commands and per-user default config ([ac03cc2](https://github.com/bherbruck/mssql-mcp-server/commit/ac03cc2c0f39f4ec1c0e9c93f4184329a3925bc8))
+* thin plugin bundle, marketplace, run server via npx ([afbf142](https://github.com/bherbruck/mssql-mcp-server/commit/afbf1425fd9a9eeb98be308f07ae6c881d995814))
+
 ## [0.2.0](https://github.com/bherbruck/mssql-mcp-server/compare/v0.1.0...v0.2.0) (2026-05-13)
 
 
