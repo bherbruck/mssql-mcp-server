@@ -32,23 +32,9 @@ Config is hot-reloaded — adding/removing servers is picked up immediately. The
 
 ### Standalone (Claude Desktop, other MCP clients)
 
-Three ways to point the server at a config. Pick whichever fits the client.
+Four ways to configure, listed simplest first. Pick whichever fits.
 
-**1. Config file on disk** — uses `~/.config/mssql-mcp-server/config.yaml` by default; override with `--config` or `$MSSQL_MCP_CONFIG`. Hot-reloads on save. Either YAML or JSON works (JSON is valid YAML 1.2).
-
-```json
-{
-  "mcpServers": {
-    "mssql": {
-      "command": "npx",
-      "args": ["-y", "github:bherbruck/mssql-mcp-server", "--config", "/abs/path/to/db.json"],
-      "env": { "PROD_SQL_PASSWORD": "..." }
-    }
-  }
-}
-```
-
-**2. Inline JSON via env var** — zero external files, the whole config sits in the MCP client's own JSON. No hot reload (it's frozen at process start).
+**1. Plain env vars** — single server, no nested JSON, no extra files. Easiest for one-off setups.
 
 ```json
 {
@@ -57,28 +43,50 @@ Three ways to point the server at a config. Pick whichever fits the client.
       "command": "npx",
       "args": ["-y", "github:bherbruck/mssql-mcp-server"],
       "env": {
-        "MSSQL_MCP_CONFIG_JSON": "{\"servers\":{\"prod\":{\"host\":\"sql.example.com\",\"database\":\"Sales\",\"auth\":{\"kind\":\"sql\",\"username\":\"claude_reader\",\"password\":\"hunter2\"}}}}"
+        "MSSQL_HOST": "sql.example.com",
+        "MSSQL_DATABASE": "Sales",
+        "MSSQL_USER": "reader",
+        "MSSQL_PASSWORD": "hunter2"
       }
     }
   }
 }
 ```
 
-**3. Inline JSON via CLI flag** — same idea, but the JSON travels in `args` instead of `env`. Equivalent to option 2.
+Recognized vars: `MSSQL_HOST`, `MSSQL_DATABASE`, `MSSQL_PORT`, `MSSQL_USER` (or `MSSQL_USERNAME`), `MSSQL_PASSWORD` (or `MSSQL_PASSWORD_ENV` for indirection), `MSSQL_AUTH` (`sql` | `windows`), `MSSQL_NAME` (alias, default `default`), `MSSQL_READ_ONLY`, `MSSQL_ENCRYPT`, `MSSQL_TRUST_SERVER_CERTIFICATE`.
+
+**2. Config file** — multi-server or when you want hot-reload on edits. Default location is `~/.config/mssql-mcp-server/config.yaml`; override with `--config` or `$MSSQL_MCP_CONFIG`. YAML or JSON (JSON is valid YAML 1.2).
 
 ```json
 {
   "mcpServers": {
     "mssql": {
       "command": "npx",
-      "args": [
-        "-y", "github:bherbruck/mssql-mcp-server",
-        "--config-json", "{\"servers\":{\"prod\":{...}}}"
-      ]
+      "args": ["-y", "github:bherbruck/mssql-mcp-server", "--config", "/abs/path/to/db.json"]
     }
   }
 }
 ```
+
+**3. Full JSON inline via env var** — multi-server without a separate file. No hot reload.
+
+```json
+{
+  "env": {
+    "MSSQL_MCP_CONFIG_JSON": "{\"servers\":{\"prod\":{\"host\":\"...\",\"database\":\"...\",\"auth\":{\"kind\":\"sql\",\"username\":\"...\",\"password\":\"...\"}}}}"
+  }
+}
+```
+
+**4. Full JSON inline via CLI flag** — same content, travels in `args`. Equivalent to option 3.
+
+```json
+{
+  "args": ["-y", "github:bherbruck/mssql-mcp-server", "--config-json", "{...}"]
+}
+```
+
+Precedence when multiple are set: `--config-json` → `MSSQL_MCP_CONFIG_JSON` → `MSSQL_HOST` env vars → `--config` file → `$MSSQL_MCP_CONFIG` → default path.
 
 ### From source
 
