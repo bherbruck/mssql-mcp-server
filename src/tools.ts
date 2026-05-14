@@ -147,10 +147,10 @@ function listDatabases(executor: Executor) {
       const result = await executor.exec(
         target.name,
         `SELECT
-           name,
-           CAST(SUM(size) * 8 / 1024 AS int) AS size_mb,
-           recovery_model_desc AS recovery_model,
-           state_desc AS state
+           d.name,
+           CAST(SUM(mf.size) * 8 / 1024 AS int) AS size_mb,
+           d.recovery_model_desc AS recovery_model,
+           d.state_desc AS state
          FROM sys.databases d
          LEFT JOIN sys.master_files mf ON mf.database_id = d.database_id
          WHERE HAS_DBACCESS(d.name) = 1
