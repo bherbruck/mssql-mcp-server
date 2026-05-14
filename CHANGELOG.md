@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.1](https://github.com/bherbruck/mssql-mcp-server/compare/v0.7.0...v0.7.1) (2026-05-14)
+
+
+### Bug Fixes
+
+* qualify ambiguous columns in list_databases query ([77e5434](https://github.com/bherbruck/mssql-mcp-server/commit/77e5434ce1db89b777f4ba0f02e0426620fab20a))
+
 ## [0.7.0](https://github.com/bherbruck/mssql-mcp-server/compare/v0.6.0...v0.7.0) (2026-05-13)
 
 
