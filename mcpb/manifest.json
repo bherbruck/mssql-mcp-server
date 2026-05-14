@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "mssql-mcp-server",
   "display_name": "Microsoft SQL Server",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Query Microsoft SQL Server from Claude. Schema discovery, parameterized queries, chart-ready JSON.",
   "long_description": "An MCP server that lets Claude discover schemas, run queries, and build live dashboards across one or more Microsoft SQL Server instances. Read-only by default; writes are gated behind a config flag and an explicit confirm token. Predictable JSON output, no SQL parser between Claude and the database.",
   "author": {
